@@ -1,0 +1,56 @@
+# Docker Compose
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-compose.*.yml
+docker-compose.*.yaml
+
+# Docker volumes
+pgdata/
+redis-data/
+__docker_build__/
+
+# Log files
+*.log
+*.pid
+
+# Local env files
+.env
+.env.*
+backend/.env
+
+# Python files
+**/__pycache__/
+**/*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+
+# Node modules (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/dist/
+frontend/build/
+
+# Database dumps
+*.sql
+*.sql.gz
+*.dump
+
+# Editor & system files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+.vscode/
+.idea/
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Windows NTFS alternate streams that break docker builds
+**:Zone.Identifier
