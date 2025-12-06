@@ -1,0 +1,130 @@
+pipeline {
+    agent any
+    
+    environment {
+        CLUSTER_NAME = 'local-cluster'
+        IMAGE_NAME = 'demo-app'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        HELM_CHART_PATH = './helm/demo-app'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Checking out code...'
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo '🔨 Building Docker image...'
+                script {
+                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "./app")
+                    docker.build("${IMAGE_NAME}:latest", "./app")
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo '🧪 Running tests...'
+                script {
+                    def testImage = docker.image("${IMAGE_NAME}:${IMAGE_TAG}")
+                    testImage.inside {
+                        sh '''
+                            pip install pytest pytest-cov
+                            pytest test_main.py -v || true
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Load Image to Kind') {
+            steps {
+                echo '📥 Loading image to kind cluster...'
+                script {
+                    sh """
+                        kind load docker-image ${IMAGE_NAME}:${IMAGE_TAG} --name ${CLUSTER_NAME}
+                        kind load docker-image ${IMAGE_NAME}:latest --name ${CLUSTER_NAME}
+                    """
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            steps {
+                echo '🚀 Deploying to staging...'
+                script {
+                    sh """
+                        helm upgrade --install demo-app-staging ${HELM_CHART_PATH} \\
+                            --namespace staging \\
+                            --create-namespace \\
+                            --values ${HELM_CHART_PATH}/values-staging.yaml \\
+                            --set image.repository=${IMAGE_NAME} \\
+                            --set image.tag=${IMAGE_TAG} \\
+                            --set image.pullPolicy=IfNotPresent \\
+                            --wait \\
+                            --timeout 5m
+                    """
+                }
+            }
+        }
+        
+        stage('Smoke Test Staging') {
+            steps {
+                echo '✅ Running smoke tests on staging...'
+                script {
+                    sh '''
+                        sleep 10
+                        kubectl wait --namespace staging \\
+                            --for=condition=ready pod \\
+                            --selector=app.kubernetes.io/name=demo-app \\
+                            --timeout=300s || true
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                input message: 'Deploy to production?', ok: 'Deploy'
+                echo '🚀 Deploying to production...'
+                script {
+                    sh """
+                        helm upgrade --install demo-app-prod ${HELM_CHART_PATH} \\
+                            --namespace prod \\
+                            --create-namespace \\
+                            --values ${HELM_CHART_PATH}/values-prod.yaml \\
+                            --set image.repository=${IMAGE_NAME} \\
+                            --set image.tag=${IMAGE_TAG} \\
+                            --set image.pullPolicy=IfNotPresent \\
+                            --wait \\
+                            --timeout 5m
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+            cleanWs()
+        }
+        success {
+            echo '✅ Pipeline succeeded!'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+        }
+    }
+}
+

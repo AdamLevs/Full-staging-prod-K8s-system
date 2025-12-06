@@ -1,0 +1,16 @@
+# Staging values for PostgreSQL
+nodeSelector:
+  env: staging
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+persistence:
+  enabled: true
+  size: 10Gi
+

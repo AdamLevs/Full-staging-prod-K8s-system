@@ -1,0 +1,16 @@
+# Production values for PostgreSQL
+nodeSelector:
+  env: prod
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  size: 20Gi
+

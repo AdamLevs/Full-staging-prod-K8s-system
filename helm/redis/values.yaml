@@ -1,0 +1,37 @@
+# Default values for Redis
+replicaCount: 1
+
+image:
+  repository: redis
+  pullPolicy: IfNotPresent
+  tag: "7.2-alpine"
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 6379
+
+persistence:
+  enabled: false
+  size: 1Gi
+  storageClassName: "standard"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector:
+  env: staging
+
+tolerations: []
+
+affinity: {}
+
+password: ""
+
